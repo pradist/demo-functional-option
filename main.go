@@ -7,11 +7,11 @@ import (
 	"time"
 )
 
-func NewServer() http.Server {
+func NewServer(addr string, readT, writeT time.Duration) http.Server {
 	s := http.Server{
-		Addr:         ":8080",
-		ReadTimeout:  1 * time.Second,
-		WriteTimeout: 1 * time.Second,
+		Addr:         addr,
+		ReadTimeout:  readT,
+		WriteTimeout: writeT,
 	}
 
 	return s
@@ -23,7 +23,7 @@ func main() {
 		fmt.Fprintln(w, "Hello World")
 	})
 
-	s := NewServer()
+	s := NewServer(":8080", 1*time.Second, 1*time.Second)
 	s.Handler = mux
 
 	log.Println("Server started", s.Addr)
