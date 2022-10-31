@@ -8,6 +8,12 @@ import (
 	"time"
 )
 
+const (
+	ServerDefaultReadTimeout  time.Duration = 100 * time.Millisecond
+	ServerDefaultWriteTimeout time.Duration = 100 * time.Millisecond
+	ServerDefaultAddress      string        = ":8080"
+)
+
 type Option func(*http.Server) error
 
 func WithAddr(addr string) Option {
@@ -35,7 +41,11 @@ func WithWriteTimeout(t time.Duration) Option {
 }
 
 func NewServer(opts ...Option) (http.Server, error) {
-	s := http.Server{}
+	s := http.Server{
+		Addr:         ServerDefaultAddress,
+		ReadTimeout:  ServerDefaultReadTimeout,
+		WriteTimeout: ServerDefaultWriteTimeout,
+	}
 	for _, opt := range opts {
 		if err := opt(&s); err != nil {
 			return s, err
@@ -50,11 +60,7 @@ func main() {
 		fmt.Fprintln(w, "Hello World")
 	})
 
-	s, err := NewServer(
-		WithAddr(":9191"),
-		WithReadTimeout(30*time.Second),
-		WithWriteTimeout(30*time.Millisecond),
-	)
+	s, err := NewServer(WithAddr(":9191"))
 
 	if err != nil {
 		log.Fatalln("Couldn't initialize server:", err)
@@ -62,7 +68,7 @@ func main() {
 
 	s.Handler = mux
 
-	log.Println("Server started", s.Addr)
+	log.Println("Server started", s.Addr, s.ReadTimeout, s.WriteTimeout)
 	if err := s.ListenAndServe(); err != nil {
 		log.Fatalln("Couldn't listen and serve", err)
 	}
