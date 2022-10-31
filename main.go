@@ -7,25 +7,30 @@ import (
 	"time"
 )
 
-type ServerOpts struct {
-	Address      string
-	ReadTimeout  time.Duration
-	WriteTimeout time.Duration
-}
+type Option func(*http.Server)
 
-func NewServerOpts() ServerOpts {
-	return ServerOpts{
-		Address:      ":8080",
-		ReadTimeout:  1 * time.Second,
-		WriteTimeout: 1 * time.Second,
+func WithAddr(addr string) Option {
+	return func(s *http.Server) {
+		s.Addr = addr
 	}
 }
 
-func NewServer(opt ServerOpts) http.Server {
-	s := http.Server{
-		Addr:         opt.Address,
-		ReadTimeout:  opt.ReadTimeout,
-		WriteTimeout: opt.WriteTimeout,
+func WithReadTimeout(d time.Duration) Option {
+	return func(s *http.Server) {
+		s.ReadTimeout = d
+	}
+}
+
+func WithWriteTimeout(d time.Duration) Option {
+	return func(s *http.Server) {
+		s.WriteTimeout = d
+	}
+}
+
+func NewServer(opts ...Option) http.Server {
+	s := http.Server{}
+	for _, opt := range opts {
+		opt(&s)
 	}
 	return s
 }
@@ -36,7 +41,11 @@ func main() {
 		fmt.Fprintln(w, "Hello World")
 	})
 
-	s := NewServer(NewServerOpts())
+	s := NewServer(
+		WithAddr(":9191"),
+		WithReadTimeout(1*time.Millisecond),
+		WithWriteTimeout(1*time.Millisecond),
+	)
 	s.Handler = mux
 
 	log.Println("Server started", s.Addr)
