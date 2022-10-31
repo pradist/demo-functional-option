@@ -1,38 +1,47 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
 	"time"
 )
 
-type Option func(*http.Server)
+type Option func(*http.Server) error
 
 func WithAddr(addr string) Option {
-	return func(s *http.Server) {
+	return func(s *http.Server) error {
 		s.Addr = addr
+		return nil
 	}
 }
 
-func WithReadTimeout(d time.Duration) Option {
-	return func(s *http.Server) {
-		s.ReadTimeout = d
+func WithReadTimeout(t time.Duration) Option {
+	return func(s *http.Server) error {
+		if t > time.Second {
+			return errors.New("read timeout value not allowed")
+		}
+		s.ReadTimeout = t
+		return nil
 	}
 }
 
-func WithWriteTimeout(d time.Duration) Option {
-	return func(s *http.Server) {
-		s.WriteTimeout = d
+func WithWriteTimeout(t time.Duration) Option {
+	return func(s *http.Server) error {
+		s.WriteTimeout = t
+		return nil
 	}
 }
 
-func NewServer(opts ...Option) http.Server {
+func NewServer(opts ...Option) (http.Server, error) {
 	s := http.Server{}
 	for _, opt := range opts {
-		opt(&s)
+		if err := opt(&s); err != nil {
+			return s, err
+		}
 	}
-	return s
+	return s, nil
 }
 
 func main() {
@@ -41,11 +50,16 @@ func main() {
 		fmt.Fprintln(w, "Hello World")
 	})
 
-	s := NewServer(
+	s, err := NewServer(
 		WithAddr(":9191"),
-		WithReadTimeout(1*time.Millisecond),
-		WithWriteTimeout(1*time.Millisecond),
+		WithReadTimeout(30*time.Second),
+		WithWriteTimeout(30*time.Millisecond),
 	)
+
+	if err != nil {
+		log.Fatalln("Couldn't initialize server:", err)
+	}
+
 	s.Handler = mux
 
 	log.Println("Server started", s.Addr)
